@@ -1,0 +1,27 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv_understat/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Data outputs and artifacts
+outputs/
+outputs*/
+*.csv
+*.json
+!data/processed/epl_unified_team_matches.csv
+!data/processed/epl_unified_feature_columns.json
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+xgpy/

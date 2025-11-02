@@ -1,0 +1,111 @@
+# Football Prediction Project Configuration
+
+project:
+  name: "Premier League Online Weights"
+  version: "0.1.0"
+  description: "Online weight-adjusting outcome model for EPL seasons 2021-2024"
+  random_seed: 21
+  timezone: "Europe/London"
+
+data:
+  league: "E0"
+  seasons:
+    - label: "2021-2022"
+      code: "2122"
+    - label: "2022-2023"
+      code: "2223"
+    - label: "2023-2024"
+      code: "2324"
+    - label: "2025-2026"
+      code: "2526"
+  warmup_matches: 5
+  rolling_window: 5
+  source_url_template: "https://www.football-data.co.uk/mmz4281/{code}/E0.csv"
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  outputs_dir: "outputs"
+  minimum_matches_per_team: 10
+
+preprocessing:
+  fill_missing_strategy: "zero"
+  odds_priority_order:
+    - "B365"
+    - "PS"
+    - "BW"
+    - "WH"
+  numeric_columns_expected:
+    - "FTHG"
+    - "FTAG"
+    - "HS"
+    - "AS"
+    - "HST"
+    - "AST"
+    - "HC"
+    - "AC"
+    - "HF"
+    - "AF"
+    - "HY"
+    - "AY"
+    - "HR"
+    - "AR"
+
+features:
+  base_columns:
+    goals_for: {home: "FTHG", away: "FTAG", weight: "positive"}
+    goals_against: {home: "FTAG", away: "FTHG", weight: "negative"}
+    shots_for: {home: "HS", away: "AS", weight: "positive"}
+    shots_against: {home: "AS", away: "HS", weight: "negative"}
+    shots_on_target_for: {home: "HST", away: "AST", weight: "positive"}
+    shots_on_target_against: {home: "AST", away: "HST", weight: "negative"}
+    corners_for: {home: "HC", away: "AC", weight: "positive"}
+    corners_against: {home: "AC", away: "HC", weight: "negative"}
+    fouls_for: {home: "HF", away: "AF", weight: "negative"}
+    fouls_against: {home: "AF", away: "HF", weight: "positive"}
+    yellow_cards: {home: "HY", away: "AY", weight: "negative"}
+    red_cards: {home: "HR", away: "AR", weight: "strong_negative"}
+  engineered:
+    goal_difference: {formula: "goals_for - goals_against", weight: "positive"}
+    shot_accuracy_for: {formula: "shots_on_target_for / shots_for", weight: "positive"}
+    shot_accuracy_against: {formula: "shots_on_target_against / shots_against", weight: "negative"}
+    discipline_index: {formula: "yellow_cards + 2 * red_cards", weight: "negative"}
+    rolling_form: {formula: "win_ratio_last5", weight: "positive"}
+    rolling_goal_trend: {formula: "avg_goal_difference_last5", weight: "positive"}
+
+model:
+  type: "online_weight_adjustment"
+  classes: ["win", "draw", "loss"]
+  learning_rate: 0.03
+  score_thresholds:
+    draw_margin: 0.1
+  bookmaker_columns: ["odds_win", "odds_draw", "odds_loss"]
+
+evaluation:
+  metrics:
+    - "accuracy"
+    - "brier_score"
+    - "calibration_vs_market"
+  reports:
+    predictions_file: "outputs/predictions.csv"
+    season_metrics_file: "outputs/season_metrics.csv"
+    summary_file: "outputs/summary.csv"
+
+validation:
+  season_holdout: "2023-2024"
+  rolling_backtest:
+    window_matches: 10
+    step_matches: 5
+
+baseline:
+  bookmaker_accuracy: 0.52
+  model_accuracy_target: 0.55
+  brier_score_target: 0.20
+
+monitoring:
+  alert_thresholds:
+    low_accuracy: 0.45
+    high_accuracy: 0.70
+    high_error_rate: 0.40
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
